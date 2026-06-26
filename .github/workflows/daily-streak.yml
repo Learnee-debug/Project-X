@@ -2,7 +2,10 @@ name: 🔥 Daily Streak Counter
 
 on:
   schedule:
-    - cron: '30 6 * * *'
+    - cron: '15 1 * * *'   # 6:45 AM IST
+    - cron: '45 6 * * *'   # 12:15 PM IST
+    - cron: '20 10 * * *'  # 3:50 PM IST
+    - cron: '50 15 * * *'  # 9:20 PM IST
   workflow_dispatch:
 
 permissions:
@@ -15,48 +18,59 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Increment streak counter
+      - name: Write update script
         run: |
-          python3 << 'EOF'
+          cat > /tmp/update.py << 'EOF'
           import json
           from datetime import datetime, timezone
-          today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+          now = datetime.now(timezone.utc)
           try:
-              with open('streak.json', 'r') as f:
+              with open('stats.json', 'r') as f:
                   data = json.load(f)
           except FileNotFoundError:
-              data = {'streak': 0, 'started': today, 'last_updated': None}
-          data['streak'] += 1
-          data['last_updated'] = today
-          data.setdefault('started', today)
-          with open('streak.json', 'w') as f:
+              data = {'total_commits': 0, 'started': now.strftime('%Y-%m-%d')}
+          data['total_commits'] = data.get('total_commits', 0) + 1
+          data['last_commit'] = now.strftime('%Y-%m-%d %H:%M:%S UTC')
+          with open('stats.json', 'w') as f:
               json.dump(data, f, indent=2)
-          streak = data['streak']
-          started = data['started']
-          lines = [
-              "# Daily Streak Tracker",
-              "",
-              "| Stat | Value |",
-              "|------|-------|",
-              f"| Streak | **{streak} days** |",
-              f"| Today | {today} |",
-              f"| Started | {started} |",
-              "",
-              "> Auto-committed daily at 12 PM IST via GitHub Actions.",
-              "> No server. No deployment. Just consistency.",
-          ]
-          with open('README.md', 'w') as f:
-              f.write('\n'.join(lines) + '\n')
-          print(f"Day {streak} done!")
+          with open('activity.log', 'a') as f:
+              f.write(f"{now.strftime('%Y-%m-%d %H:%M:%S')} UTC — commit #{data['total_commits']}\n")
           EOF
 
-      - name: Commit and push
+      - name: Make random commits
         run: |
-          STREAK=$(python3 -c "import json; print(json.load(open('streak.json'))['streak'])")
-          TODAY=$(date -u '+%Y-%m-%d')
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add streak.json README.md
-          git commit -m "🔥 Day $STREAK — $TODAY"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Random number of commits: 4 to 8 per session
+          NUM=$(python3 -c "import random; print(random.randint(4, 8))")
+          echo "🎲 Making $NUM commits this session..."
+
+          MSGS=(
+            "⚡ daily grind"
+            "🔥 stay consistent"
+            "💡 learning daily"
+            "🚀 building daily"
+            "🧠 stacking habits"
+            "📈 small progress"
+            "💪 day by day"
+            "🎯 staying focused"
+            "✨ building momentum"
+            "🌱 growing daily"
+            "🔧 keep shipping"
+            "📚 never stop learning"
+          )
+
+          for i in $(seq 1 $NUM); do
+            python3 /tmp/update.py
+            IDX=$((RANDOM % ${#MSGS[@]}))
+            MSG="${MSGS[$IDX]}"
+            git add stats.json activity.log
+            git commit -m "$MSG — $(date -u '+%H:%M:%S')"
+            sleep 2
+          done
+
           git push
