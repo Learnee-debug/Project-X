@@ -42,11 +42,11 @@ jobs:
 
       - name: Make random commits
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
+          git config user.email "177908686+Learnee-debug@users.noreply.github.com"
+          git config user.name "Learnee-debug"
 
-          # Random number of commits: 4 to 8 per session
-          NUM=$(python3 -c "import random; print(random.randint(4, 8))")
+          # Random number of commits: 6 to 8 per session (4 sessions/day = ~25-30/day)
+          NUM=$(python3 -c "import random; print(random.randint(6, 8))")
           echo "🎲 Making $NUM commits this session..."
 
           MSGS=(
@@ -73,4 +73,5 @@ jobs:
             sleep 2
           done
 
+          git pull --rebase
           git push
